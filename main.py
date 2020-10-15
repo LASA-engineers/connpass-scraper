@@ -121,6 +121,10 @@ def get_member_attendance(members, events):
                 print("withdrawn user")
 
     for i, event in enumerate(events):
+        for member in members:
+            if member.join > event.date:
+                attendance[member.idstr][i] = -1
+
         page = get_page(event.url + "participation/")
         if not page:
             continue

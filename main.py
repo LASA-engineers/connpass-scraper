@@ -1,3 +1,4 @@
+import csv
 import re
 import time
 
@@ -26,7 +27,6 @@ class Member(object):
         self.count = count
         self.date = date
         self.join = join
-        self.attend = {}
 
     def __str__(self):
         return f"Member({self.idstr}, {self.name}, {self.join}, {self.count}, {self.date})"
@@ -146,7 +146,16 @@ def get_member_attendance(members, events):
     return attendance
 
 
+def print_csv(members, events, attendance):
+    with open("lasa-connpass.csv", "w", newline="") as csvfile:
+        writer = csv.writer(csvfile, delimiter=",", quotechar="\"", quoting=csv.QUOTE_MINIMAL)
+        writer.writerow(["ID", "name", "join", "count"] + [event.title for event in events])
+        for member in members:
+            writer.writerow([member.idstr, member.name, member.join, member.count] + attendance[member.idstr])
+
+
 if __name__ == "__main__":
     members = get_group_members()
     events = get_group_events()
     attendance = get_member_attendance(members, events)
+    print_csv(members, events, attendance)

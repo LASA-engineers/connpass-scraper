@@ -129,21 +129,24 @@ def get_member_attendance(members, events):
         if not page:
             continue
 
-        set_attendance(page.find("div", class_="concerned_area"), i, 2)
+        if page.find("div", class_="cancelled_table_area"):
+            set_attendance(page.find("div", class_="cancelled_table_area").table, i, 1)
+
+        set_attendance(page.find("div", class_="concerned_area"), i, 10)
 
         table = page.find("div", class_="participation_table_area").table
-        if len(table.tbody.find_all("tr")[-1].find_all("td")) == 1:
+        if len(table.tbody.find_all("tr")[-1].find_all("td")) == 2:
+            # single page
+            set_attendance(table, i, 2)
+        else:
             # more than 100 participants; multiple pages
             base = table.tbody.find_all("tr")[-1].td.a["href"]
             page = get_page(base)
             while True:
-                set_attendance(page.find("div", class_="participation_table_area").table, i, 1)
+                set_attendance(page.find("div", class_="participation_table_area").table, i, 2)
                 page = visit_next(base, page)
                 if not page:
                     break
-        else:
-            # single page
-            set_attendance(table, i, 1)
 
     return attendance
 

@@ -83,8 +83,7 @@ def get_group_members():
 
     page = get_page(MEMBER_BASE)
     while True:
-        for member in page.find_all("tr", class_="GroupMemberProfile"):
-            members.append(Member.load_from_html(member))
+        members += [Member.load_from_html(member) for member in page.find_all("tr", class_="GroupMemberProfile")]
 
         page = visit_next(MEMBER_BASE, page)
         if not page:
@@ -98,8 +97,7 @@ def get_group_events():
 
     page = get_page(EVENT_BASE)
     while True:
-        for event in page.find_all("div", class_="group_event_inner"):
-            events.append(Event.load_from_html(event))
+        events += [Event.load_from_html(event) for event in page.find_all("div", class_="group_event_inner")]
 
         page = visit_next(EVENT_BASE, page)
         if not page:

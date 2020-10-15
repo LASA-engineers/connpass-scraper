@@ -14,7 +14,7 @@ class Member(object):
     def load_from_html(cls, html):
         link = html.find("p", class_="GroupMemberDisplayName").a
         name = link.string
-        idstr = re.compile(r"^.*/([^/]+)/$").search(link["href"]).group(1)
+        idstr = parse_idstr(link["href"])
         count = re.compile(r"^(\d+) 回$").search(html.find("td", class_="event").string).group(1)
         date = parse_date(html.find("td", class_="date").string)
         join = parse_date(html.find("td", class_="join_date").string)
@@ -50,6 +50,10 @@ class Event(object):
         return f"Event({self.date}, {self.title})"
 
 
+def parse_idstr(s):
+    return re.compile(r"^https?://connpass.com/user/([^/]+)/.*$").search(s).group(1)
+
+
 def parse_date(s):
     if not s:
         return s
@@ -60,7 +64,10 @@ def get_page(url):
     print(f"GET {url}")
     res = requests.get(url)
     time.sleep(3)
-    return BeautifulSoup(res.content, "html.parser")
+    if res.status_code == requests.codes.ok:
+        return BeautifulSoup(res.content, "html.parser")
+    else:
+        return None
 
 
 def visit_next(base, soup):
@@ -98,9 +105,48 @@ def get_group_events():
         if not page:
             break
 
-    return events
+    return list(reversed(events))
+
+
+def get_member_attendance(members, events):
+    attendance = {member.idstr: [0] * len(events) for member in members}
+
+    def set_attendance(table, i, a):
+        for name in table.find_all("p", class_="display_name"):
+            if name.find("a"):
+                idstr = parse_idstr(name.a["href"])
+                if idstr in attendance:
+                    attendance[idstr][i] = a
+                else:
+                    print(f"unsubscribed user: {idstr}")
+            else:
+                print("withdrawn user")
+
+    for i, event in enumerate(events):
+        page = get_page(event.url + "participation/")
+        if not page:
+            continue
+
+        set_attendance(page.find("div", class_="concerned_area"), i, 2)
+
+        table = page.find("div", class_="participation_table_area").table
+        if len(table.tbody.find_all("tr")[-1].find_all("td")) == 1:
+            # more than 100 participants; multiple pages
+            base = table.tbody.find_all("tr")[-1].td.a["href"]
+            page = get_page(base)
+            while True:
+                set_attendance(page.find("div", class_="participation_table_area").table, i, 1)
+                page = visit_next(base, page)
+                if not page:
+                    break
+        else:
+            # single page
+            set_attendance(table, i, 1)
+
+    return attendance
 
 
 if __name__ == "__main__":
     members = get_group_members()
     events = get_group_events()
+    attendance = get_member_attendance(members, events)

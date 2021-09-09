@@ -134,19 +134,22 @@ def get_member_attendance(members, events):
 
         set_attendance(page.find("div", class_="concerned_area"), i, 10)
 
-        table = page.find("div", class_="participation_table_area").table
-        if len(table.tbody.find_all("tr")[-1].find_all("td")) == 2:
-            # single page
-            set_attendance(table, i, 2)
-        else:
-            # more than 100 participants; multiple pages
-            base = table.tbody.find_all("tr")[-1].td.a["href"]
-            page = get_page(base)
-            while True:
-                set_attendance(page.find("div", class_="participation_table_area").table, i, 2)
-                page = visit_next(base, page)
-                if not page:
-                    break
+        for div in page.find_all("div", class_="participation_table_area"):
+            td = div.table.tbody.find_all("tr")[-1].find_all("td")
+            if len(td) == 1:
+                # no participants
+                if td[0].text == "イベント申込者はいません。":
+                    continue
+                else:
+                    # more than 100 participants; multiple pages
+                    base = td[0].a["href"]
+                    page = get_page(base)
+                    while page:
+                        set_attendance(page.find("div", class_="participation_table_area").table, i, 2)
+                        page = visit_next(base, page)
+            else:
+                # single page
+                set_attendance(div.table, i, 2)
 
     return attendance
 
